@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/PokeHex.Desktop/PokeHex.Desktop.csproj" />
     <Project Path="src/PokeHex.Services/PokeHex.Services.csproj" />
     <Project Path="src/PokeHex.UI/PokeHex.UI.csproj" />
   </Folder>
