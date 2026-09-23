@@ -1,0 +1,154 @@
+@namespace PokeHex.UI
+@using PokeHex.Services
+@using PKHeX.Core
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@inject SaveSession Session
+@inject SaveIO SaveIo
+@inject INativeFilePicker FilePicker
+@inject IJSRuntime Js
+@inject AppNavigation Nav
+
+<section class="panel home">
+    <header class="hero">
+        <h1>PokeHex Local</h1>
+        <p>Edita saves de juegos oficiales Pokémon en tu PC. Los datos no salen de tu dispositivo. Los hackroms solo se abren si la estructura coincide (best-effort).</p>
+        <div class="cta-row">
+            @if (FilePicker.SupportsNativeDialogs)
+            {
+                <button class="btn primary" @onclick="OpenNative">Abrir save</button>
+                <button class="btn" disabled="@(!Session.HasSave)" @onclick="SaveNative">Guardar save</button>
+            }
+            else
+            {
+                <label class="btn primary file-btn">
+                    Abrir save
+                    <InputFile OnChange="OnInputFile" accept="@SaveFileExtensions.InputFileAccept" />
+                </label>
+            }
+            <button class="btn" disabled="@(!Session.HasSave)" @onclick="DownloadExport">Exportar</button>
+            <button class="btn ghost" disabled="@(!Session.CanUndo)" @onclick="Undo">Deshacer</button>
+        </div>
+    </header>
+
+    <div class="dropzone @(_dragging ? "dragging" : "")"
+         @ondragenter="OnDragEnter" @ondragover="OnDragOver" @ondragleave="OnDragLeave"
+         @ondrop="OnDrop" @ondragenter:preventDefault @ondragover:preventDefault>
+        <strong>Suelta aquí tu archivo de guardado</strong>
+        <span>@SaveFileExtensions.DropzoneHint</span>
+        <span class="hint">Haz siempre una copia de seguridad antes de editar.</span>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Session.LastError) || !string.IsNullOrEmpty(_message))
+    {
+        <div class="alert">@(Session.LastError ?? _message)</div>
+    }
+
+    @if (_suggestForce && _pendingBytes is not null)
+    {
+        <div class="force-box">
+            <h3>Forzar como juego (riesgo de corrupción)</h3>
+            <p>Úsalo solo si conoces el juego base del hackrom.</p>
+            <select @bind="_forceVersionKey">
+                @foreach (var v in SaveIo.GetForceLoadVersions())
+                {
+                    <option value="@((int)v.Version)">@v.Label (@v.Version)</option>
+                }
+            </select>
+            <button class="btn danger" @onclick="ForceLoad">Forzar carga</button>
+        </div>
+    }
+
+    @if (Session.HasSave)
+    {
+        <div class="loaded-card">
+            <h3>Archivo cargado</h3>
+            <p>@Session.FileName</p>
+            <p>@Session.Summary</p>
+            <button class="btn primary" @onclick="() => Nav.Go(AppSection.Equipo)">Ir al equipo</button>
+        </div>
+    }
+</section>
+
+@code {
+    private bool _dragging;
+    private bool _suggestForce;
+    private byte[]? _pendingBytes;
+    private string? _pendingName;
+    private string? _message;
+    private int _forceVersionKey = (int)GameVersion.E;
+
+    private void OnDragEnter() => _dragging = true;
+    private void OnDragLeave() => _dragging = false;
+    private void OnDragOver() { }
+
+    private async Task OnDrop(DragEventArgs e)
+    {
+        _dragging = false;
+        _message = "Usa «Abrir save» para elegir el archivo. El drop nativo de bytes requiere el diálogo de archivo en este host.";
+    }
+
+    private async Task OnInputFile(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        await using var stream = file.OpenReadStream(64 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        await LoadBytes(ms.ToArray(), file.Name);
+    }
+
+    private async Task OpenNative()
+    {
+        var path = await FilePicker.PickOpenAsync("Saves Pokémon", SaveFileExtensions.Open);
+        if (path is null) return;
+        var bytes = await File.ReadAllBytesAsync(path);
+        await LoadBytes(bytes, Path.GetFileName(path), path);
+    }
+
+    private async Task SaveNative()
+    {
+        var data = Session.ExportBytes();
+        if (data is null) return;
+        var path = await FilePicker.PickSaveAsync("Save Pokémon", [".sav", ".main", ".*"], Session.FileName ?? "edited.sav");
+        if (path is null) return;
+        await File.WriteAllBytesAsync(path, data);
+        _message = $"Guardado en {path}";
+    }
+
+    private async Task DownloadExport()
+    {
+        var data = Session.ExportBytes();
+        if (data is null) return;
+        var name = Session.FileName ?? "edited.sav";
+        var b64 = Convert.ToBase64String(data);
+        await Js.InvokeVoidAsync("pokehexDownload", name, b64);
+        _message = "Exportación iniciada.";
+    }
+
+    private Task Undo()
+    {
+        Session.Undo();
+        return Task.CompletedTask;
+    }
+
+    private Task LoadBytes(byte[] data, string name, string? path = null)
+    {
+        _pendingBytes = data;
+        _pendingName = name;
+        var result = Session.LoadBytes(data, name, path);
+        _suggestForce = !result.Success && result.SuggestForceLoad;
+        _message = result.Success ? $"Cargado: {result.Save!.Version}" : null;
+        if (result.Success) Nav.Go(AppSection.Equipo);
+        return Task.CompletedTask;
+    }
+
+    private Task ForceLoad()
+    {
+        if (_pendingBytes is null) return Task.CompletedTask;
+        var forceVersion = (GameVersion)_forceVersionKey;
+        var result = Session.LoadBytes(_pendingBytes, _pendingName, force: true, forceVersion: forceVersion);
+        _suggestForce = !result.Success;
+        _message = result.Success ? $"Carga forzada como {forceVersion}" : result.ErrorMessage;
+        return Task.CompletedTask;
+    }
+}

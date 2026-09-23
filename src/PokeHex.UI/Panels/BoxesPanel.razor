@@ -1,0 +1,56 @@
+@namespace PokeHex.UI
+@using PokeHex.Services
+@inject PokemonEditFacade Pokemon
+@inject AppNavigation Nav
+@inject SaveSession Session
+
+<section class="panel">
+    <h2>Cajas</h2>
+    @if (Session.Save is null || !Session.Save.HasBox)
+    {
+        <p class="muted">Este save no tiene sistema de cajas.</p>
+    }
+    else
+    {
+        <div class="box-toolbar">
+            <button class="btn" disabled="@(_box <= 0)" @onclick="() => _box--">←</button>
+            <span>Caja @(_box + 1) / @Session.Save.BoxCount</span>
+            <button class="btn" disabled="@(_box >= Session.Save.BoxCount - 1)" @onclick="() => _box++">→</button>
+        </div>
+        <div class="slot-grid boxes">
+            @for (var s = 0; s < Session.Save.BoxSlotCount; s++)
+            {
+                var slot = s;
+                var pkm = Pokemon.GetBoxSlot(_box, slot);
+                <div class="slot"
+                     draggable="true"
+                     @ondragstart="() => OnDragStart(false, _box, slot)"
+                     @ondragover:preventDefault
+                     @ondrop="() => OnDrop(false, _box, slot)"
+                     @onclick="() => Select(false, _box, slot)">
+                    <div class="slot-name">@Pokemon.GetSpeciesName(pkm)</div>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private int _box;
+    private SlotRef? _dragFrom;
+
+    protected override void OnInitialized() => Session.Changed += () => InvokeAsync(StateHasChanged);
+
+    private void Select(bool party, int box, int slot)
+        => Nav.SelectSlot(new SlotRef { IsParty = party, Box = box, Slot = slot });
+
+    private void OnDragStart(bool party, int box, int slot)
+        => _dragFrom = new SlotRef { IsParty = party, Box = box, Slot = slot };
+
+    private void OnDrop(bool party, int box, int slot)
+    {
+        if (_dragFrom is null) return;
+        Pokemon.SwapSlots(_dragFrom, new SlotRef { IsParty = party, Box = box, Slot = slot });
+        _dragFrom = null;
+    }
+}

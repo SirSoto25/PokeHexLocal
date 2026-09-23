@@ -1,0 +1,72 @@
+@namespace PokeHex.UI
+@using PokeHex.Services
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@inject MysteryGiftService Gifts
+@inject PokemonEditFacade Pokemon
+@inject AppNavigation Nav
+@inject SaveSession Session
+@inject IJSRuntime Js
+
+<section class="panel">
+    <h2>Misc / Regalos</h2>
+    <p>@Gifts.Status</p>
+
+    <h3>Importar regalo misterioso</h3>
+    <InputFile OnChange="OnGift" accept=".wc*,.pgf,.pgt,.pcd,.wc6,.wc7,.wc8,.wc9" />
+    @if (!string.IsNullOrEmpty(_giftMsg))
+    {
+        <div class="alert">@_giftMsg</div>
+    }
+
+    <h3>Importar / exportar .pk*</h3>
+    <InputFile OnChange="OnPkmImport" accept=".pk*,.pk1,.pk2,.pk3,.pk4,.pk5,.pk6,.pk7,.pk8,.pk9,.pb7,.pb8,.pa8" />
+    <button class="btn" disabled="@(Pokemon.GetSelected(Nav.SelectedSlot) is null)" @onclick="ExportPkm">Exportar Pokémon seleccionado</button>
+    @if (!string.IsNullOrEmpty(_pkmMsg))
+    {
+        <div class="alert">@_pkmMsg</div>
+    }
+</section>
+
+@code {
+    private string? _giftMsg;
+    private string? _pkmMsg;
+
+    private async Task OnGift(InputFileChangeEventArgs e)
+    {
+        await using var s = e.File.OpenReadStream(4 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await s.CopyToAsync(ms);
+        _giftMsg = Gifts.ImportGift(ms.ToArray());
+    }
+
+    private async Task OnPkmImport(InputFileChangeEventArgs e)
+    {
+        if (Nav.SelectedSlot is null)
+        {
+            _pkmMsg = "Selecciona antes una ranura en Equipo o Cajas.";
+            return;
+        }
+        await using var s = e.File.OpenReadStream(1 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await s.CopyToAsync(ms);
+        var pkm = Pokemon.ImportPkm(ms.ToArray());
+        if (pkm is null)
+        {
+            _pkmMsg = "No se pudo importar el archivo .pk*.";
+            return;
+        }
+        Pokemon.PersistSelected(Nav.SelectedSlot, pkm);
+        _pkmMsg = "Pokémon importado en la ranura seleccionada.";
+    }
+
+    private async Task ExportPkm()
+    {
+        var pkm = Pokemon.GetSelected(Nav.SelectedSlot);
+        if (pkm is null) return;
+        var data = Pokemon.ExportPkm(pkm);
+        var name = $"{Pokemon.GetSpeciesName(pkm)}.pk{Session.Save?.Generation ?? 0}";
+        await Js.InvokeVoidAsync("pokehexDownload", name, Convert.ToBase64String(data));
+        _pkmMsg = "Exportación iniciada.";
+    }
+}

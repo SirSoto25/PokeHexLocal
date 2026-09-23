@@ -1,0 +1,56 @@
+@namespace PokeHex.UI
+@using PokeHex.Services
+@inject PokedexService Dex
+@inject SaveSession Session
+
+<section class="panel">
+    <h2>Pokédex</h2>
+    <p class="muted">Entradas vistas/capturadas (máx. 200 listadas).</p>
+    @if (!Session.HasSave)
+    {
+        <p class="muted">Carga un save primero.</p>
+    }
+    else
+    {
+        <table class="data-table">
+            <thead><tr><th>#</th><th>Nombre</th><th>Visto</th><th>Capturado</th></tr></thead>
+            <tbody>
+            @foreach (var e in _entries)
+            {
+                <tr>
+                    <td>@e.Species</td>
+                    <td>@e.Name</td>
+                    <td>@(e.Seen ? "Sí" : "No")</td>
+                    <td>
+                        <input type="checkbox" checked="@e.Caught"
+                               @onchange="ev => Toggle(e.Species, ev)" />
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<PokedexEntryView> _entries = Array.Empty<PokedexEntryView>();
+
+    protected override void OnInitialized()
+    {
+        Session.Changed += Reload;
+        Reload();
+    }
+
+    private void Reload()
+    {
+        _entries = Dex.GetEntries();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Toggle(ushort species, ChangeEventArgs e)
+    {
+        var caught = e.Value is bool b && b || string.Equals(Convert.ToString(e.Value), "true", StringComparison.OrdinalIgnoreCase);
+        Dex.SetCaught(species, caught);
+        Reload();
+    }
+}
