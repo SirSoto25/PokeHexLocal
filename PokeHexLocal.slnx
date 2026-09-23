@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PokeHex.Services/PokeHex.Services.csproj" />
+  </Folder>
+</Solution>
