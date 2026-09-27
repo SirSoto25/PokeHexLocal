@@ -22,6 +22,9 @@
                     <option value="1">Femenino</option>
                 </select>
             </label>
+            <label>Horas jugadas <input type="number" min="0" @bind="_hours" @bind:after="ApplyPlayTime" /></label>
+            <label>Minutos <input type="number" min="0" max="59" @bind="_minutes" @bind:after="ApplyPlayTime" /></label>
+            <label>Segundos <input type="number" min="0" max="59" @bind="_seconds" @bind:after="ApplyPlayTime" /></label>
         </div>
     }
 </section>
@@ -29,7 +32,7 @@
 @code {
     private string _ot = "";
     private uint _tid, _sid, _money;
-    private int _gender;
+    private int _gender, _hours, _minutes, _seconds;
 
     protected override void OnInitialized()
     {
@@ -44,6 +47,11 @@
         _sid = Trainer.DisplaySID;
         _money = Trainer.Money;
         _gender = Trainer.Gender;
+        _hours = Trainer.PlayedHours;
+        _minutes = Trainer.PlayedMinutes;
+        _seconds = Trainer.PlayedSeconds;
         InvokeAsync(StateHasChanged);
     }
+
+    private void ApplyPlayTime() => Trainer.SetPlayed(_hours, _minutes, _seconds);
 }

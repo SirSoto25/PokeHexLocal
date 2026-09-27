@@ -125,4 +125,52 @@ public sealed class PokemonEditFacade
         if (slot.IsParty) SetPartySlot(slot.Slot, pkm);
         else SetBoxSlot(slot.Box, slot.Slot, pkm);
     }
+
+    public string ItemName(int index)
+    {
+        var items = GameInfo.GetStrings("es").Item;
+        if (index <= 0) return "(ninguno)";
+        return index < items.Count ? items[index] : $"Objeto {index}";
+    }
+
+    public string SendToStorage(SlotRef slot)
+    {
+        var sav = _session.Save ?? throw new InvalidOperationException("Sin save");
+        if (!slot.IsParty) return "Ese Pokémon ya está en una caja.";
+        if (!sav.HasBox) return "Este save no tiene cajas.";
+        if (slot.Slot < 0 || slot.Slot >= sav.PartyCount) return "Ranura de equipo no válida.";
+        var pkm = sav.GetPartySlotAtIndex(slot.Slot);
+        if (pkm.Species == 0) return "La ranura del equipo está vacía.";
+
+        for (int box = 0; box < sav.BoxCount; box++)
+        {
+            for (int index = 0; index < sav.BoxSlotCount; index++)
+            {
+                if (sav.GetBoxSlotAtIndex(box, index).Species != 0) continue;
+                _session.SnapshotForUndo();
+                sav.SetBoxSlotAtIndex(pkm, box, index);
+                sav.DeletePartySlot(slot.Slot);
+                _session.MarkDirty();
+                return $"Enviado a la caja {box + 1}, ranura {index + 1}.";
+            }
+        }
+
+        return "No hay espacio en las cajas.";
+    }
+
+    public string SendToParty(SlotRef slot)
+    {
+        var sav = _session.Save ?? throw new InvalidOperationException("Sin save");
+        if (slot.IsParty) return "Ese Pokémon ya está en el equipo.";
+        if (!sav.HasBox) return "Este save no tiene cajas.";
+        if (sav.PartyCount >= 6) return "El equipo está completo.";
+        var pkm = sav.GetBoxSlotAtIndex(slot.Box, slot.Slot);
+        if (pkm.Species == 0) return "La ranura de la caja está vacía.";
+
+        _session.SnapshotForUndo();
+        sav.SetPartySlotAtIndex(pkm, sav.PartyCount);
+        sav.SetBoxSlotAtIndex(sav.BlankPKM, slot.Box, slot.Slot);
+        _session.MarkDirty();
+        return "Enviado al equipo.";
+    }
 }

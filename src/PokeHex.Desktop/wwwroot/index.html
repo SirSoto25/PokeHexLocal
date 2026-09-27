@@ -9,18 +9,7 @@
 </head>
 <body>
     <div id="app">Cargando PokeHex Local…</div>
+    <script src="_content/PokeHex.UI/pokehex.js"></script>
     <script src="_framework/blazor.webview.js"></script>
-    <script>
-      window.pokehexDownload = function (filename, base64) {
-        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-        const blob = new Blob([bytes]);
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-      };
-    </script>
 </body>
 </html>

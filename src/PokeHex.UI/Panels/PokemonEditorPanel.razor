@@ -57,6 +57,25 @@
             <label>SID
                 <input type="number" @bind="_sid" @bind:after="ApplyIds" />
             </label>
+            <label>Género
+                <select @bind="_gender" @bind:after="ApplyGender">
+                    <option value="0">Macho</option>
+                    <option value="1">Hembra</option>
+                    <option value="2">Sin género</option>
+                </select>
+            </label>
+            <label>Objeto (@Pokemon.ItemName(_heldItem))
+                <input type="number" min="0" @bind="_heldItem" @bind:after="ApplyHeld" />
+            </label>
+            <label>Poké Ball
+                <input type="number" min="0" @bind="_ball" @bind:after="ApplyBall" />
+            </label>
+            <label>Amistad
+                <input type="number" min="0" max="255" @bind="_friendship" @bind:after="ApplyFriendship" />
+            </label>
+            <label>Nivel de encuentro
+                <input type="number" min="0" max="100" @bind="_metLevel" @bind:after="ApplyMet" />
+            </label>
         </div>
 
         <h3>IVs / EVs</h3>
@@ -86,7 +105,30 @@
                 </select>
             }
         </div>
-        <button class="btn primary" @onclick="Persist">Aplicar al save</button>
+        <h3>Movimientos reaprendibles</h3>
+        <div class="move-grid">
+            @for (var m = 0; m < 4; m++)
+            {
+                var mi = m;
+                <select value="@_relearn[mi]" @onchange="e => SetRelearn(mi, e)">
+                    @for (var i = 0; i < Math.Min(Pokemon.MoveNames.Count, 950); i++)
+                    {
+                        <option value="@i">@Pokemon.MoveNames[i]</option>
+                    }
+                </select>
+            }
+        </div>
+        <div class="cta-row">
+            <button class="btn primary" @onclick="Persist">Aplicar al save</button>
+            @if (Nav.SelectedSlot?.IsParty == true)
+            {
+                <button class="btn" @onclick="ToBox">Enviar a una caja</button>
+            }
+            else
+            {
+                <button class="btn" @onclick="ToParty">Enviar al equipo</button>
+            }
+        </div>
         <span class="muted">@_status</span>
     }
 </section>
@@ -100,6 +142,8 @@
     private readonly int[] _ivs = new int[6];
     private readonly int[] _evs = new int[6];
     private readonly int[] _moves = new int[4];
+    private readonly int[] _relearn = new int[4];
+    private int _gender, _heldItem, _ball, _friendship, _metLevel;
 
     protected override void OnParametersSet() => Reload();
     protected override void OnInitialized()
@@ -132,6 +176,12 @@
             _evs[i] = evBuf[i];
         }
         _moves[0] = _pkm.Move1; _moves[1] = _pkm.Move2; _moves[2] = _pkm.Move3; _moves[3] = _pkm.Move4;
+        _relearn[0] = _pkm.RelearnMove1; _relearn[1] = _pkm.RelearnMove2; _relearn[2] = _pkm.RelearnMove3; _relearn[3] = _pkm.RelearnMove4;
+        _gender = _pkm.Gender;
+        _heldItem = _pkm.HeldItem;
+        _ball = _pkm.Ball;
+        _friendship = _pkm.CurrentFriendship;
+        _metLevel = _pkm.MetLevel;
         StateHasChanged();
     }
 
@@ -184,6 +234,41 @@
             case 2: _pkm.Move3 = (ushort)v; break;
             case 3: _pkm.Move4 = (ushort)v; break;
         }
+    }
+
+    private void ApplyGender() { if (_pkm is null) return; _pkm.Gender = (byte)_gender; }
+    private void ApplyHeld() { if (_pkm is null) return; _pkm.HeldItem = _heldItem; }
+    private void ApplyBall() { if (_pkm is null) return; _pkm.Ball = (byte)_ball; }
+    private void ApplyFriendship() { if (_pkm is null) return; _pkm.CurrentFriendship = (byte)Math.Clamp(_friendship, 0, 255); }
+    private void ApplyMet() { if (_pkm is null) return; _pkm.MetLevel = (byte)Math.Clamp(_metLevel, 0, 100); }
+
+    private void SetRelearn(int i, ChangeEventArgs e)
+    {
+        if (_pkm is null || !int.TryParse(Convert.ToString(e.Value), out var v)) return;
+        _relearn[i] = v;
+        switch (i)
+        {
+            case 0: _pkm.RelearnMove1 = (ushort)v; break;
+            case 1: _pkm.RelearnMove2 = (ushort)v; break;
+            case 2: _pkm.RelearnMove3 = (ushort)v; break;
+            case 3: _pkm.RelearnMove4 = (ushort)v; break;
+        }
+    }
+
+    private void ToBox()
+    {
+        if (Nav.SelectedSlot is null) return;
+        _status = Pokemon.SendToStorage(Nav.SelectedSlot);
+        if (_status.StartsWith("Enviado", StringComparison.Ordinal))
+            Nav.Go(AppSection.Cajas);
+    }
+
+    private void ToParty()
+    {
+        if (Nav.SelectedSlot is null) return;
+        _status = Pokemon.SendToParty(Nav.SelectedSlot);
+        if (_status.StartsWith("Enviado", StringComparison.Ordinal))
+            Nav.Go(AppSection.Equipo);
     }
 
     private void Persist()

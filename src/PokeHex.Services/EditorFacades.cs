@@ -109,6 +109,34 @@ public sealed class TrainerEditFacade
             _session.MarkDirty();
         }
     }
+
+    public int PlayedHours
+    {
+        get => _session.Save?.PlayedHours ?? 0;
+        set => SetPlayed(value, PlayedMinutes, PlayedSeconds);
+    }
+
+    public int PlayedMinutes
+    {
+        get => _session.Save?.PlayedMinutes ?? 0;
+        set => SetPlayed(PlayedHours, value, PlayedSeconds);
+    }
+
+    public int PlayedSeconds
+    {
+        get => _session.Save?.PlayedSeconds ?? 0;
+        set => SetPlayed(PlayedHours, PlayedMinutes, value);
+    }
+
+    public void SetPlayed(int hours, int minutes, int seconds)
+    {
+        if (_session.Save is null) return;
+        _session.SnapshotForUndo();
+        _session.Save.PlayedHours = Math.Max(0, hours);
+        _session.Save.PlayedMinutes = Math.Clamp(minutes, 0, 59);
+        _session.Save.PlayedSeconds = Math.Clamp(seconds, 0, 59);
+        _session.MarkDirty();
+    }
 }
 
 public sealed class InventoryService

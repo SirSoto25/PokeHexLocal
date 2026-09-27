@@ -22,6 +22,10 @@ public sealed class SaveSession
 
     public bool HasSave => Save is not null;
 
+    public bool ChecksumsValid => Save?.ChecksumsValid ?? true;
+
+    public string ChecksumInfo => Save?.ChecksumInfo ?? "";
+
     public string Summary
     {
         get
