@@ -3,5 +3,6 @@
     <Project Path="src/PokeHex.Desktop/PokeHex.Desktop.csproj" />
     <Project Path="src/PokeHex.Services/PokeHex.Services.csproj" />
     <Project Path="src/PokeHex.UI/PokeHex.UI.csproj" />
+    <Project Path="src/PokeHex.Web/PokeHex.Web.csproj" />
   </Folder>
 </Solution>

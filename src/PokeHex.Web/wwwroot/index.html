@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PokeHex Local (QA Web)</title>
+    <base href="/" />
+    <link href="_content/PokeHex.UI/css/pokehex.css" rel="stylesheet" />
+</head>
+<body>
+    <div id="app">Cargando PokeHex Local…</div>
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script>
+      window.pokehexDownload = function (filename, base64) {
+        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        const blob = new Blob([bytes]);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+    </script>
+</body>
+</html>
