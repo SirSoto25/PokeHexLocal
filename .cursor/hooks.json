@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterShellExecution": [
+      {
+        "command": ".cursor/hooks/after-shell.ps1",
+        "matcher": "dotnet (build|publish|run)"
+      }
+    ]
+  }
+}

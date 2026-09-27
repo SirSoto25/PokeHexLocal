@@ -1,0 +1,14 @@
+---
+description: Core conventions for PokeHex Local (GPL, architecture, hackroms, Spanish UI)
+alwaysApply: true
+---
+
+# PokeHex Local — core rules
+
+- **License:** GPLv3. Keep LICENSE and copyright notices. Do not add proprietary dependencies that conflict with GPL.
+- **Architecture:** UI in `src/PokeHex.UI` (RCL). Domain in `src/PokeHex.Services` (PKHeX.Core). Desktop host `src/PokeHex.Desktop` (Photino) is the primary product. `src/PokeHex.Web` is WASM QA only.
+- **Local only:** Never upload saves to a network. No analytics that send save bytes. No backend/DB (no Supabase).
+- **Hackroms:** Best-effort only. If `SaveUtil` cannot detect, show a clear Spanish error and optional force-as-game with corruption warning. Do not claim universal hackrom support.
+- **UI language:** Spanish labels and messages. Species/move names may come from PKHeX `GameInfo`.
+- **Design:** Modern, simple shell. Avoid purple-on-white, cream+terracotta serif, default Inter/Roboto stacks, unnecessary cards in hero, dark-mode-by-default.
+- **Multiagent:** Prefer `pkhex-domain` for PKHeX logic, `blazor-ui` for Razor/CSS, `qa-browser` for verification. Keep domain code out of `.razor` files beyond binding.

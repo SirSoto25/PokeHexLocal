@@ -1,0 +1,13 @@
+---
+description: Blazor UI conventions for PokeHex.UI Razor components
+globs: src/PokeHex.UI/**/*
+alwaysApply: false
+---
+
+# Blazor UI
+
+- Components live under `src/PokeHex.UI`. Prefer small focused components per section (Inicio, Equipo, Cajas, Editor, etc.).
+- Inject services from `PokeHex.Services`; do not call `SaveUtil` / PKHeX types directly from markup when a facade exists.
+- CSS variables for brand colors in shared stylesheet. Expressive fonts via Google Fonts or bundled woff (not Inter/Roboto/Arial/system-only).
+- Keep first viewport of Inicio uncluttered: brand, short sentence, open/save CTA, dropzone.
+- All user-facing strings in Spanish.

@@ -1,0 +1,13 @@
+---
+description: PKHeX.Core service layer conventions
+globs: src/PokeHex.Services/**/*
+alwaysApply: false
+---
+
+# PokeHex.Services
+
+- Wrap PKHeX.Core behind session/facade types (`SaveSession`, `SaveIO`, `PokemonEditFacade`, `LegalityService`).
+- Prefer `SaveUtil.GetVariantSAV` / try-get APIs for detection. Force-load only when the user opts in.
+- Never log raw save bytes. Mark session dirty after mutations; support undo via byte snapshots where implemented.
+- Generation-aware: guard gen-specific fields before writing.
+- Spanish exception/user messages for load failures (unsupported size, corrupt, hackrom mismatch).
