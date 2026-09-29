@@ -1,0 +1,10 @@
+﻿bin/
+obj/
+dist/
+.vs/
+*.user
+*.suo
+tools/ApiProbe/bin/
+tools/ApiProbe/obj/
+.DS_Store
+*.log
