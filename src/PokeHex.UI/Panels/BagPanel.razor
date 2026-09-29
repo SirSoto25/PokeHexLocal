@@ -1,0 +1,61 @@
+@namespace PokeHex.UI
+@using PokeHex.Services
+@inject InventoryService Inventory
+@inject SaveSession Session
+
+<section class="panel">
+    <h2>Mochila</h2>
+    @if (!Session.HasSave)
+    {
+        <p class="muted">Carga un save primero.</p>
+    }
+    else if (_pouches.Count == 0)
+    {
+        <p class="muted">No se pudo leer el inventario de este save.</p>
+    }
+    else
+    {
+        @foreach (var pouch in _pouches)
+        {
+            <h3>@pouch.Type</h3>
+            <table class="data-table">
+                <thead><tr><th>Objeto</th><th>Cantidad</th></tr></thead>
+                <tbody>
+                @foreach (var item in pouch.Items)
+                {
+                    <tr>
+                        <td>@item.Name</td>
+                        <td>
+                            <input type="number" min="0" max="999" value="@item.Count"
+                                   @onchange="e => ChangeCount(item, e)" />
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    }
+</section>
+
+@code {
+    private IReadOnlyList<InventoryPouchView> _pouches = Array.Empty<InventoryPouchView>();
+
+    protected override void OnInitialized()
+    {
+        Session.Changed += Reload;
+        Reload();
+    }
+
+    private void Reload()
+    {
+        _pouches = Inventory.GetPouches();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ChangeCount(InventoryItemView item, ChangeEventArgs e)
+    {
+        if (!int.TryParse(Convert.ToString(e.Value), out var count)) return;
+        Inventory.SetItemCount(item.PouchType, item.Index, count);
+        Reload();
+    }
+}

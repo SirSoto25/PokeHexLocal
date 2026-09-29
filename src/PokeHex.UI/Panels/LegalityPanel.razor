@@ -1,0 +1,47 @@
+@namespace PokeHex.UI
+@using PokeHex.Services
+@inject LegalityService Legality
+@inject PokemonEditFacade Pokemon
+@inject AppNavigation Nav
+@inject SaveSession Session
+
+<section class="panel">
+    <h2>Legalidad</h2>
+    @if (Session.WasForceLoaded)
+    {
+        <div class="alert warn">Save con carga forzada / posible hackrom: los resultados pueden no aplicar.</div>
+    }
+    @if (Pokemon.GetSelected(Nav.SelectedSlot) is null)
+    {
+        <p class="muted">Selecciona un Pokémon para analizar.</p>
+    }
+    else
+    {
+        <button class="btn primary" @onclick="Run">Analizar</button>
+        @if (_report is not null)
+        {
+            <h3 class="@(_report.Valid ? "ok" : "bad")">@_report.Summary</h3>
+            @if (_report.HackromWarning is not null)
+            {
+                <p class="muted">@_report.HackromWarning</p>
+            }
+            <ul class="legal-list">
+                @foreach (var line in _report.Lines.Take(40))
+                {
+                    <li>@line</li>
+                }
+            </ul>
+        }
+    }
+</section>
+
+@code {
+    private LegalityReport? _report;
+
+    private void Run()
+    {
+        var pkm = Pokemon.GetSelected(Nav.SelectedSlot);
+        if (pkm is null) return;
+        _report = Legality.Analyze(pkm);
+    }
+}

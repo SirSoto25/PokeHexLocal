@@ -1,0 +1,49 @@
+@namespace PokeHex.UI
+@using PokeHex.Services
+@inject TrainerEditFacade Trainer
+@inject SaveSession Session
+
+<section class="panel">
+    <h2>Entrenador</h2>
+    @if (!Session.HasSave)
+    {
+        <p class="muted">Carga un save primero.</p>
+    }
+    else
+    {
+        <div class="editor-grid">
+            <label>Nombre OT <input @bind="_ot" @bind:after="() => Trainer.OT = _ot" /></label>
+            <label>TID <input type="number" @bind="_tid" @bind:after="() => Trainer.DisplayTID = _tid" /></label>
+            <label>SID <input type="number" @bind="_sid" @bind:after="() => Trainer.DisplaySID = _sid" /></label>
+            <label>Dinero <input type="number" @bind="_money" @bind:after="() => Trainer.Money = _money" /></label>
+            <label>Género
+                <select @bind="_gender" @bind:after="() => Trainer.Gender = _gender">
+                    <option value="0">Masculino</option>
+                    <option value="1">Femenino</option>
+                </select>
+            </label>
+        </div>
+    }
+</section>
+
+@code {
+    private string _ot = "";
+    private uint _tid, _sid, _money;
+    private int _gender;
+
+    protected override void OnInitialized()
+    {
+        Session.Changed += Reload;
+        Reload();
+    }
+
+    private void Reload()
+    {
+        _ot = Trainer.OT;
+        _tid = Trainer.DisplayTID;
+        _sid = Trainer.DisplaySID;
+        _money = Trainer.Money;
+        _gender = Trainer.Gender;
+        InvokeAsync(StateHasChanged);
+    }
+}

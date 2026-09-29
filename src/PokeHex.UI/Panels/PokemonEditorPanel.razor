@@ -1,0 +1,196 @@
+@namespace PokeHex.UI
+@using PokeHex.Services
+@using PKHeX.Core
+@inject PokemonEditFacade Pokemon
+@inject AppNavigation Nav
+@inject SaveSession Session
+
+<section class="panel">
+    <h2>Editor Pokémon</h2>
+    @if (Nav.SelectedSlot is null || _pkm is null)
+    {
+        <p class="muted">Selecciona un Pokémon en Equipo o Cajas.</p>
+    }
+    else
+    {
+        <div class="editor-grid">
+            <label>Especie
+                <select @bind="_species" @bind:after="ApplySpecies">
+                    @for (var i = 0; i < Math.Min(Pokemon.SpeciesNames.Count, 1025); i++)
+                    {
+                        <option value="@i">@Pokemon.SpeciesNames[i]</option>
+                    }
+                </select>
+            </label>
+            <label>Mote
+                <input @bind="_nickname" @bind:event="oninput" @bind:after="ApplyNick" />
+            </label>
+            <label>Nivel
+                <input type="number" min="1" max="100" @bind="_level" @bind:after="ApplyLevel" />
+            </label>
+            <label>Naturaleza
+                <select @bind="_nature" @bind:after="ApplyNature">
+                    @for (var i = 0; i < Pokemon.NatureNames.Count; i++)
+                    {
+                        <option value="@i">@Pokemon.NatureNames[i]</option>
+                    }
+                </select>
+            </label>
+            <label>Habilidad
+                <select @bind="_ability" @bind:after="ApplyAbility">
+                    @for (var i = 0; i < Math.Min(Pokemon.AbilityNames.Count, 400); i++)
+                    {
+                        <option value="@i">@Pokemon.AbilityNames[i]</option>
+                    }
+                </select>
+            </label>
+            <label class="check"><input type="checkbox" @bind="_shiny" @bind:after="ApplyShiny" /> Shiny</label>
+            <label>PID
+                <input @bind="_pidHex" @bind:after="ApplyPid" />
+            </label>
+            <label>OT
+                <input @bind="_ot" @bind:after="ApplyOt" />
+            </label>
+            <label>TID
+                <input type="number" @bind="_tid" @bind:after="ApplyIds" />
+            </label>
+            <label>SID
+                <input type="number" @bind="_sid" @bind:after="ApplyIds" />
+            </label>
+        </div>
+
+        <h3>IVs / EVs</h3>
+        <div class="stat-grid">
+            @for (var i = 0; i < 6; i++)
+            {
+                var idx = i;
+                <label>@StatName(idx) IV
+                    <input type="number" min="0" max="31" value="@_ivs[idx]" @onchange="e => SetIv(idx, e)" />
+                </label>
+                <label>EV
+                    <input type="number" min="0" max="252" value="@_evs[idx]" @onchange="e => SetEv(idx, e)" />
+                </label>
+            }
+        </div>
+
+        <h3>Movimientos</h3>
+        <div class="move-grid">
+            @for (var m = 0; m < 4; m++)
+            {
+                var mi = m;
+                <select value="@_moves[mi]" @onchange="e => SetMove(mi, e)">
+                    @for (var i = 0; i < Math.Min(Pokemon.MoveNames.Count, 950); i++)
+                    {
+                        <option value="@i">@Pokemon.MoveNames[i]</option>
+                    }
+                </select>
+            }
+        </div>
+        <button class="btn primary" @onclick="Persist">Aplicar al save</button>
+        <span class="muted">@_status</span>
+    }
+</section>
+
+@code {
+    private PKM? _pkm;
+    private int _species, _level, _nature, _ability;
+    private bool _shiny;
+    private string _nickname = "", _ot = "", _pidHex = "", _status = "";
+    private uint _tid, _sid;
+    private readonly int[] _ivs = new int[6];
+    private readonly int[] _evs = new int[6];
+    private readonly int[] _moves = new int[4];
+
+    protected override void OnParametersSet() => Reload();
+    protected override void OnInitialized()
+    {
+        Session.Changed += () => InvokeAsync(Reload);
+        Nav.Changed += () => InvokeAsync(Reload);
+    }
+
+    private void Reload()
+    {
+        _pkm = Pokemon.GetSelected(Nav.SelectedSlot);
+        if (_pkm is null) { StateHasChanged(); return; }
+        _species = _pkm.Species;
+        _nickname = _pkm.Nickname;
+        _level = _pkm.CurrentLevel;
+        _nature = (int)_pkm.Nature;
+        _ability = _pkm.Ability;
+        _shiny = _pkm.IsShiny;
+        _pidHex = _pkm.PID.ToString("X8");
+        _ot = _pkm.OriginalTrainerName;
+        _tid = _pkm.DisplayTID;
+        _sid = _pkm.DisplaySID;
+        var ivBuf = new int[6];
+        var evBuf = new int[6];
+        _pkm.GetIVs(ivBuf);
+        _pkm.GetEVs(evBuf);
+        for (int i = 0; i < 6; i++)
+        {
+            _ivs[i] = ivBuf[i];
+            _evs[i] = evBuf[i];
+        }
+        _moves[0] = _pkm.Move1; _moves[1] = _pkm.Move2; _moves[2] = _pkm.Move3; _moves[3] = _pkm.Move4;
+        StateHasChanged();
+    }
+
+    private static string StatName(int i) => i switch { 0 => "PS", 1 => "Ataque", 2 => "Defensa", 3 => "At.Esp", 4 => "Def.Esp", _ => "Velocidad" };
+
+    private void ApplySpecies() { if (_pkm is null) return; _pkm.Species = (ushort)_species; }
+    private void ApplyNick() { if (_pkm is null) return; _pkm.Nickname = _nickname; }
+    private void ApplyLevel() { if (_pkm is null) return; _pkm.CurrentLevel = (byte)Math.Clamp(_level, 1, 100); }
+    private void ApplyNature() { if (_pkm is null) return; _pkm.Nature = (Nature)_nature; }
+    private void ApplyAbility() { if (_pkm is null) return; _pkm.Ability = _ability; }
+    private void ApplyShiny()
+    {
+        if (_pkm is null) return;
+        CommonEdits.SetIsShiny(_pkm, _shiny);
+        _pidHex = _pkm.PID.ToString("X8");
+    }
+    private void ApplyPid()
+    {
+        if (_pkm is null) return;
+        if (uint.TryParse(_pidHex, System.Globalization.NumberStyles.HexNumber, null, out var pid))
+            _pkm.PID = pid;
+    }
+    private void ApplyOt() { if (_pkm is null) return; _pkm.OriginalTrainerName = _ot; }
+    private void ApplyIds()
+    {
+        if (_pkm is null) return;
+        _pkm.DisplayTID = _tid;
+        _pkm.DisplaySID = _sid;
+    }
+    private void SetIv(int i, ChangeEventArgs e)
+    {
+        if (_pkm is null || !int.TryParse(Convert.ToString(e.Value), out var v)) return;
+        _ivs[i] = Math.Clamp(v, 0, 31);
+        _pkm.SetIVs(_ivs);
+    }
+    private void SetEv(int i, ChangeEventArgs e)
+    {
+        if (_pkm is null || !int.TryParse(Convert.ToString(e.Value), out var v)) return;
+        _evs[i] = Math.Clamp(v, 0, 252);
+        _pkm.SetEVs(_evs);
+    }
+    private void SetMove(int i, ChangeEventArgs e)
+    {
+        if (_pkm is null || !int.TryParse(Convert.ToString(e.Value), out var v)) return;
+        _moves[i] = v;
+        switch (i)
+        {
+            case 0: _pkm.Move1 = (ushort)v; break;
+            case 1: _pkm.Move2 = (ushort)v; break;
+            case 2: _pkm.Move3 = (ushort)v; break;
+            case 3: _pkm.Move4 = (ushort)v; break;
+        }
+    }
+
+    private void Persist()
+    {
+        if (_pkm is null || Nav.SelectedSlot is null) return;
+        _pkm.RefreshChecksum();
+        Pokemon.PersistSelected(Nav.SelectedSlot, _pkm);
+        _status = "Guardado en el save en memoria. Exporta desde Inicio.";
+    }
+}

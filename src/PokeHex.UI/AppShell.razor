@@ -1,0 +1,103 @@
+@namespace PokeHex.UI
+@using PokeHex.Services
+@using Microsoft.AspNetCore.Components.Web
+@implements IDisposable
+@inject SaveSession Session
+@inject AppNavigation Nav
+
+<div class="app-shell">
+    <aside class="sidebar">
+        <div class="brand">
+            <span class="brand-mark"></span>
+            <div>
+                <div class="brand-name">PokeHex Local</div>
+                <div class="brand-sub">Editor de saves</div>
+            </div>
+        </div>
+        <nav class="nav">
+            @foreach (var item in NavItems)
+            {
+                <button class="nav-item @(Nav.Current == item.Section ? "active" : "")"
+                        @onclick="() => Nav.Go(item.Section)"
+                        disabled="@(!Session.HasSave && item.Section != AppSection.Inicio)">
+                    @item.Label
+                </button>
+            }
+        </nav>
+        <div class="sidebar-footer">
+            @if (Session.HasSave)
+            {
+                <div class="save-meta">@Session.Summary</div>
+                @if (Session.IsDirty)
+                {
+                    <div class="dirty">Cambios sin guardar</div>
+                }
+            }
+            else
+            {
+                <div class="save-meta">Sin archivo</div>
+            }
+        </div>
+    </aside>
+    <main class="main">
+        @switch (Nav.Current)
+        {
+            case AppSection.Inicio:
+                <HomePanel />
+                break;
+            case AppSection.Equipo:
+                <PartyPanel />
+                break;
+            case AppSection.Cajas:
+                <BoxesPanel />
+                break;
+            case AppSection.Editor:
+                <PokemonEditorPanel />
+                break;
+            case AppSection.Entrenador:
+                <TrainerPanel />
+                break;
+            case AppSection.Mochila:
+                <BagPanel />
+                break;
+            case AppSection.Pokedex:
+                <PokedexPanel />
+                break;
+            case AppSection.Misc:
+                <MiscPanel />
+                break;
+            case AppSection.Legalidad:
+                <LegalityPanel />
+                break;
+        }
+    </main>
+</div>
+
+@code {
+    private readonly (AppSection Section, string Label)[] NavItems =
+    [
+        (AppSection.Inicio, "Inicio"),
+        (AppSection.Equipo, "Equipo"),
+        (AppSection.Cajas, "Cajas"),
+        (AppSection.Editor, "Editor"),
+        (AppSection.Entrenador, "Entrenador"),
+        (AppSection.Mochila, "Mochila"),
+        (AppSection.Pokedex, "Pokédex"),
+        (AppSection.Misc, "Misc / Regalos"),
+        (AppSection.Legalidad, "Legalidad"),
+    ];
+
+    protected override void OnInitialized()
+    {
+        Session.Changed += OnChanged;
+        Nav.Changed += OnChanged;
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Session.Changed -= OnChanged;
+        Nav.Changed -= OnChanged;
+    }
+}

@@ -1,0 +1,50 @@
+@namespace PokeHex.UI
+@using PokeHex.Services
+@inject PokemonEditFacade Pokemon
+@inject AppNavigation Nav
+@inject SaveSession Session
+
+<section class="panel">
+    <h2>Equipo</h2>
+    <p class="muted">Pulsa un Pokémon para editarlo. Arrastra a otra ranura para intercambiar.</p>
+    <div class="slot-grid party">
+        @for (var i = 0; i < 6; i++)
+        {
+            var idx = i;
+            var pkm = Pokemon.GetParty(idx);
+            <div class="slot @(_dragFrom?.Slot == idx && _dragFrom?.IsParty == true ? "dragging" : "")"
+                 draggable="true"
+                 @ondragstart="() => OnDragStart(true, 0, idx)"
+                 @ondragover:preventDefault
+                 @ondrop="() => OnDrop(true, 0, idx)"
+                 @onclick="() => Select(true, 0, idx)">
+                <div class="slot-index">@(idx + 1)</div>
+                <div class="slot-name">@Pokemon.GetSpeciesName(pkm)</div>
+                @if (pkm is not null)
+                {
+                    <div class="slot-meta">Nv. @pkm.CurrentLevel</div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    private SlotRef? _dragFrom;
+
+    protected override void OnInitialized() => Session.Changed += () => InvokeAsync(StateHasChanged);
+
+    private void Select(bool party, int box, int slot)
+        => Nav.SelectSlot(new SlotRef { IsParty = party, Box = box, Slot = slot });
+
+    private void OnDragStart(bool party, int box, int slot)
+        => _dragFrom = new SlotRef { IsParty = party, Box = box, Slot = slot };
+
+    private void OnDrop(bool party, int box, int slot)
+    {
+        if (_dragFrom is null) return;
+        var to = new SlotRef { IsParty = party, Box = box, Slot = slot };
+        Pokemon.SwapSlots(_dragFrom, to);
+        _dragFrom = null;
+    }
+}
